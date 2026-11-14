@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meter Tracking</title>
+<link rel="stylesheet" href="/theme.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script defer src="/app.js"></script>
+</head>
+<body x-data="meterApp()" x-init="init()">
+<div class="min-h-screen">
+  <header class="bg-white border-b border-[#e3e9e5]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#176b4a] text-white grid place-items-center font-bold text-lg">M</div>
+        <div><div class="font-bold tracking-tight text-lg">Meter Tracking</div><div class="text-xs text-[#718078]">Barcode capture · Batch control</div></div>
+      </div>
+      <button class="btn btn-secondary text-xs" @click="exportExcel()">↓ Export to Excel</button>
+    </div>
+  </header>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+      <div><p class="text-xs font-bold uppercase tracking-widest text-[#718078]">Production overview</p><h1 class="text-2xl font-bold mt-1">Scanning dashboard</h1><p class="text-sm text-[#718078] mt-1">Every batch contains 27 accepted meter scans.</p></div>
+      <label class="text-xs font-semibold text-[#718078]">WORK DATE<input class="input mt-1 !text-sm !py-2 !w-auto" type="date" x-model="date" @change="changeDate(date)"></label>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div class="panel stat"><div class="stat-label">Meters scanned today</div><div class="stat-value" x-text="data.total_scanned"></div></div>
+      <div class="panel stat"><div class="stat-label">Completed batches</div><div class="stat-value" x-text="data.completed_batches"></div></div>
+      <div class="panel stat"><div class="stat-label">Current batch</div><div class="stat-value" x-text="'#' + String(batchNumber).padStart(3,'0')"></div></div>
+      <div class="panel stat"><div class="stat-label">Meters remaining</div><div class="stat-value" x-text="remaining"></div></div>
+    </div>
+    <div class="flex gap-1 border-b border-[#dfe6e0] mb-5">
+      <button class="navbtn" :class="tab==='scan'?'active':''" @click="setTab('scan')">Scan meters</button>
+      <button class="navbtn" :class="tab==='batches'?'active':''" @click="setTab('batches')">Batch history</button>
+      <button class="navbtn" :class="tab==='records'?'active':''" @click="setTab('records')">Scan records</button>
+    </div>
+    <section x-show="tab==='scan'" class="grid lg:grid-cols-[1.35fr_.85fr] gap-4">
+      <div class="panel p-5 sm:p-6">
+        <div class="flex justify-between items-center gap-2 mb-5"><div><div class="text-xs font-bold uppercase tracking-wider text-[#718078]">Active batch</div><div class="text-2xl font-bold mt-1" x-text="'Batch ' + String(batchNumber).padStart(3,'0')"></div></div><span class="pill" x-text="currentBatch ? 'IN PROGRESS' : 'READY TO START'"></span></div>
+        <div class="flex justify-between items-end mb-2"><div class="text-sm text-[#718078]">Batch completion</div><div class="mono font-semibold text-lg" x-text="batchCount + ' / 27'"></div></div>
+        <div class="progress mb-2"><span :style="'width:'+(batchCount/27*100)+'%'"></span></div>
+        <div class="text-xs text-[#718078] mb-6" x-text="remaining + ' more accepted scans to complete this batch'"></div>
+        <form @submit.prevent="scan()">
+          <label class="block text-sm font-semibold mb-2" for="scanner">Scan meter barcode</label>
+          <input id="scanner" x-ref="scanner" class="input" x-model="meter" @keydown.enter.prevent="scan()" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Click here, then scan barcode" :disabled="busy">
+          <div class="flex flex-wrap gap-2 mt-3">
+            <button class="btn btn-primary flex-1" type="submit" :disabled="busy || !meter.trim()" x-text="busy ? 'Saving scan…' : 'Record meter scan'"></button>
+            <button class="btn btn-secondary" type="button" @click="meter='';focusScanner()">Clear</button>
+          </div>
+        </form>
+        <div class="mt-5 rounded-xl p-3 text-sm" :class="messageType==='error'?'bg-[#fcebea] text-[#b33b36]':messageType==='complete'?'bg-[#e6f2eb] text-[#176b4a]':'bg-[#f2f6f2] text-[#52645a]'" x-show="message" x-text="message"></div>
+        <p class="text-xs text-[#718078] mt-4">Keep the cursor in the scan field. Most USB barcode scanners enter the number and send Enter automatically. A scan is counted only after the system confirms it.</p>
+      </div>
+      <div class="panel p-5 sm:p-6">
+        <div class="font-bold mb-4">How batch tracking works</div>
+        <div class="space-y-4 text-sm">
+          <div class="flex gap-3"><div class="w-7 h-7 rounded-full bg-[#e6f2eb] text-[#176b4a] grid place-items-center font-bold shrink-0">1</div><div><b>Scan a meter</b><p class="text-[#718078] mt-1">The barcode number is captured and saved immediately.</p></div></div>
+          <div class="flex gap-3"><div class="w-7 h-7 rounded-full bg-[#e6f2eb] text-[#176b4a] grid place-items-center font-bold shrink-0">2</div><div><b>Automatic checks</b><p class="text-[#718078] mt-1">Duplicate meter numbers are rejected and do not increase the count.</p></div></div>
+          <div class="flex gap-3"><div class="w-7 h-7 rounded-full bg-[#e6f2eb] text-[#176b4a] grid place-items-center font-bold shrink-0">3</div><div><b>Next batch opens automatically</b><p class="text-[#718078] mt-1">After 27 accepted scans, the completed batch is closed and the next one begins.</p></div></div>
+        </div>
+        <div class="mt-6 p-3 rounded-xl bg-[#f5f7f5]"><div class="text-xs text-[#718078]">Today's batch capacity used</div><div class="mono text-xl font-semibold mt-1" x-text="data.total_scanned + ' meters'"></div><div class="text-xs text-[#718078] mt-1" x-text="data.completed_batches + ' full batches · ' + (data.total_scanned % 27) + ' meters in the current batch'"></div></div>
+      </div>
+    </section>
+    <section x-show="tab==='batches'" class="panel overflow-hidden">
+      <div class="p-4 sm:p-5 flex items-center justify-between"><div><h2 class="font-bold">Batch history</h2><p class="text-xs text-[#718078] mt-1">Batches are grouped by work date.</p></div><button class="btn btn-secondary" @click="load()">Refresh</button></div>
+      <div class="overflow-x-auto"><table><thead><tr><th>Batch</th><th>Scanned</th><th>Progress</th><th>Status</th></tr></thead><tbody>
+        <template x-for="b in data.batches" :key="b.id"><tr><td class="mono font-semibold" x-text="'#'+String(b.batch_number).padStart(3,'0')"></td><td class="mono" x-text="b.scanned_count+' / 27'"></td><td><div class="progress min-w-24"><span :style="'width:'+(Number(b.scanned_count)/27*100)+'%'"></span></div></td><td><span class="pill" :class="Number(b.scanned_count)===27?'':'pill-warn'" x-text="Number(b.scanned_count)===27?'Completed':'In progress'"></span></td></tr></template>
+        <tr x-show="!data.batches.length"><td colspan="4" class="text-center text-[#718078] py-10">No batches recorded for this date yet.</td></tr>
+      </tbody></table></div>
+    </section>
+    <section x-show="tab==='records'" class="panel overflow-hidden">
+      <div class="p-4 sm:p-5 flex items-center justify-between"><div><h2 class="font-bold">Recent meter scans</h2><p class="text-xs text-[#718078] mt-1">Latest 500 records for the selected date.</p></div><button class="btn btn-secondary" @click="load()">Refresh</button></div>
+      <div class="overflow-x-auto"><table><thead><tr><th>Meter number</th><th>Batch</th><th>Time scanned</th></tr></thead><tbody>
+        <template x-for="s in data.scans" :key="s.id"><tr><td class="mono font-semibold" x-text="s.meter_number"></td><td class="mono" x-text="'#'+String(s.batch_number).padStart(3,'0')"></td><td class="text-[#718078]" x-text="new Date(s.scanned_at).toLocaleTimeString()"></td></tr></template>
+        <tr x-show="!data.scans.length"><td colspan="3" class="text-center text-[#718078] py-10">No scans recorded for this date yet.</td></tr>
+      </tbody></table></div>
+    </section>
+    <footer class="text-xs text-[#89958e] mt-8 flex flex-wrap justify-between gap-2"><span>Meter Tracking · Batch size 27</span><span>Duplicate checks apply across all recorded dates.</span></footer>
+  </main>
+</div>
+</body></html>
