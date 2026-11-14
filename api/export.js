@@ -1,6 +1,6 @@
 import { db } from 'hatchable';
 
-export const access = 'admin';
+export const access = 'member';
 export const methods = ['GET'];
 
 function validDate(value) {
