@@ -5,7 +5,7 @@
 <title>Meter Tracking</title>
 <link rel="stylesheet" href="/theme.css">
 <script src="https://cdn.tailwindcss.com"></script>
-<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script defer src="/vendor/alpine.min.js"></script>
 <script defer src="/app.js"></script>
 </head>
 <body x-data="meterApp()" x-init="init()">
@@ -43,14 +43,18 @@
         <div class="text-xs text-[#718078] mb-6" x-text="remaining + ' more accepted scans to complete this batch'"></div>
         <form @submit.prevent="scan()">
           <label class="block text-sm font-semibold mb-2" for="scanner">Scan meter barcode</label>
-          <input id="scanner" x-ref="scanner" class="input" x-model="meter" @keydown.enter.prevent="scan()" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Click here, then scan barcode" :disabled="busy">
+          <input id="scanner" x-ref="scanner" class="input" x-model="meter" @keydown.enter.prevent="scan()" @focus="scannerFocused()" @blur="scannerBlurred()" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="none" placeholder="Click here, then scan barcode">
+          <div class="flex flex-wrap items-center justify-between gap-2 mt-2 text-xs">
+            <span class="font-semibold" :class="scannerReady ? 'text-[#176b4a]' : 'text-[#9a6419]'" x-text="scannerReady ? 'Scanner input ready' : 'Click the input to connect scanner focus'"></span>
+            <span class="text-[#718078]" x-show="busy" x-text="'Saving scans…' + (queueCount ? ' · ' + queueCount + ' waiting' : '')"></span>
+          </div>
           <div class="flex flex-wrap gap-2 mt-3">
-            <button class="btn btn-primary flex-1" type="submit" :disabled="busy || !meter.trim()" x-text="busy ? 'Saving scan…' : 'Record meter scan'"></button>
+            <button class="btn btn-primary flex-1" type="submit" :disabled="!meter.trim()" x-text="'Record meter scan'"></button>
             <button class="btn btn-secondary" type="button" @click="meter='';focusScanner()">Clear</button>
           </div>
         </form>
         <div class="mt-5 rounded-xl p-3 text-sm" :class="messageType==='error'?'bg-[#fcebea] text-[#b33b36]':messageType==='complete'?'bg-[#e6f2eb] text-[#176b4a]':'bg-[#f2f6f2] text-[#52645a]'" x-show="message" x-text="message"></div>
-        <p class="text-xs text-[#718078] mt-4">Keep the cursor in the scan field. Most USB barcode scanners enter the number and send Enter automatically. A scan is counted only after the system confirms it.</p>
+        <p class="text-xs text-[#718078] mt-4">USB scanners set to USB HID / Keyboard mode type directly into this field. Configure the scanner to send Enter after each barcode. Scans are queued if one is still saving, and only confirmed saves count toward the batch.</p>
       </div>
       <div class="panel p-5 sm:p-6">
         <div class="font-bold mb-4">How batch tracking works</div>
