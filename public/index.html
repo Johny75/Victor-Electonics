@@ -74,7 +74,7 @@
       </tbody></table></div>
     </section>
     <section x-show="tab==='records'" class="panel overflow-hidden">
-      <div class="p-4 sm:p-5 flex items-center justify-between"><div><h2 class="font-bold">Recent meter scans</h2><p class="text-xs text-[#718078] mt-1">Latest 500 records for the selected date.</p></div><button class="btn btn-secondary" @click="load()">Refresh</button></div>
+      <div class="p-4 sm:p-5 flex items-center justify-between"><div><h2 class="font-bold">Recent meter scans</h2><p class="text-xs text-[#718078] mt-1">Latest 500 records for the selected date.</p></div><button class="btn btn-secondary" @click="load()" :disabled="loading" x-text="loading ? 'Refreshing…' : 'Refresh records'"></button></div>
       <div class="overflow-x-auto"><table><thead><tr><th>Meter number</th><th>Batch</th><th>Time scanned</th></tr></thead><tbody>
         <template x-for="s in data.scans" :key="s.id"><tr><td class="mono font-semibold" x-text="s.meter_number"></td><td class="mono" x-text="'#'+String(s.batch_number).padStart(3,'0')"></td><td class="text-[#718078]" x-text="new Date(s.scanned_at).toLocaleTimeString()"></td></tr></template>
         <tr x-show="!data.scans.length"><td colspan="3" class="text-center text-[#718078] py-10">No scans recorded for this date yet.</td></tr>
